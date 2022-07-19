@@ -14,7 +14,7 @@ export const getEntities = (canvas: HTMLCanvasElement) => {
 		components: [
 			position(canvas.width / 2, canvas.height / 2),
 			radius(smallestDimension * 0.1),
-			mass(smallestDimension * 0.5),
+			mass(40),
 		]
 	};
 
@@ -23,10 +23,10 @@ export const getEntities = (canvas: HTMLCanvasElement) => {
 	 */
 	const planet: Entity = {
 		components: [
-			position(canvas.width / 2, (canvas.height / 2) - 300),
+			position(canvas.width / 2, (canvas.height / 2) - 150),
 			radius(smallestDimension * 0.02),
 			velocity(0.5, 0),
-			mass(smallestDimension * 0.0002),
+			mass(20),
 		]
 	};
 

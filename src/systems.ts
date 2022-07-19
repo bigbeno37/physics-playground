@@ -33,7 +33,7 @@ export const updateEntityPositionWithVelocity = (entity: Entity, availableEntiti
 
 			// Calculate the force on the given entity based on the other entity's mass and distance using
 			// Newton's law of universal gravitation, F = G * m1 * m2 / d^2. (G is set as 1 for simplicity)
-			const gravitationalForce = (mass.data * otherMass.data) / (distance * distance);
+			const gravitationalForce = otherMass.data / Math.pow(distance, 2);
 			const acceleration = Vec.scale(Vec.unit(distanceVector), gravitationalForce);
 
 			velocity.data = Vec.add(velocity.data, Vec.scale(acceleration, delta));
