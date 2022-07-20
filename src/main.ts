@@ -1,6 +1,6 @@
-import { isPosition, isRadius, position, velocity } from './components';
-import { getEntities } from './entities';
-import { updateEntityPositionWithVelocity } from './systems';
+import { mass, position, radius, velocity } from './components';
+import { createRenderSystem, physicsSystem } from './systems';
+import { Engine } from './Engine';
 
 const canvas = document.querySelector('canvas');
 
@@ -10,43 +10,29 @@ if (!ctx) throw new Error('Unable to initialise canvas context!');
 
 canvas.height = window.innerHeight;
 canvas.width = window.innerWidth;
+const smallestDimension = Math.min(canvas.width, canvas.height);
 
-const { entities, components } = getEntities(canvas);
 
-let prevTime: DOMHighResTimeStamp | undefined;
-const renderFrame = (time: DOMHighResTimeStamp) => {
-	if (!prevTime) prevTime = time;
+const engine = new Engine();
 
-	const delta = time - prevTime;
+const renderSystem = createRenderSystem(ctx);
 
-	prevTime = time;
+engine
+	.addSystem(physicsSystem)
+	.addSystem(renderSystem);
 
-	// Clear the canvas
-	ctx.clearRect(0, 0, canvas.width, canvas.height);
+// Planet
+engine.spawn()
+	.insert(position(canvas.width / 2, (canvas.height / 2) - 150))
+	.insert(radius(smallestDimension * 0.02))
+	.insert(velocity(0.5, 0))
+	.insert(mass(20));
 
-	// Run systems
-	components.forEach((entitiesWithComponent, component) => {
-		switch (component) {
-			case 'velocity':
-				entitiesWithComponent.forEach(entity => updateEntityPositionWithVelocity(entity, entities, delta));
-				break;
-		}
-	});
+// Sun
+engine.spawn()
+	.insert(position(canvas.width / 2, canvas.height / 2))
+	.insert(radius(smallestDimension * 0.1))
+	.insert(velocity(0, 0))
+	.insert(mass(40, true));
 
-	// Draw
-	components.get('position')?.forEach(entity => {
-		const position = entity.components.find(isPosition);
-		const radius = entity.components.find(isRadius);
-
-		if (!position || !radius) throw new Error('Missing position or radius component!');
-
-		ctx.beginPath();
-		ctx.arc(position.data.x, position.data.y, radius.data, 0, 2 * Math.PI);
-		ctx.fillStyle = '#000';
-		ctx.fill();
-	});
-
-	requestAnimationFrame(renderFrame);
-};
-
-requestAnimationFrame(renderFrame);
+engine.run();
