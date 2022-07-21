@@ -1,5 +1,11 @@
 import { Vector } from './vector';
 
+/**
+ * Represents a Component, a unit of data that can be added to an Entity.
+ *
+ * @example
+ * type Position = Component<'position', {x: number, y: number}>;
+ */
 type Component<N extends string, T> = {
 	name: N,
 	data: T,

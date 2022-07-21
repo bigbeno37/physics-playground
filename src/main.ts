@@ -12,7 +12,6 @@ canvas.height = window.innerHeight;
 canvas.width = window.innerWidth;
 const smallestDimension = Math.min(canvas.width, canvas.height);
 
-
 const engine = new Engine();
 
 const renderSystem = createRenderSystem(ctx);
