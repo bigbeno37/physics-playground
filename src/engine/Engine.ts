@@ -1,7 +1,5 @@
-import { GetEntities, System } from './systems';
-import { Entity, EntityId } from './entities';
-import { AvailableComponent, AvailableComponentName } from './components';
-import { mapAddToSet, mapDeleteFromSet } from './utils';
+import { mapAddToSet, mapDeleteFromSet } from '../utils';
+import { AnyComponent, AnyComponentList, Entity, EntityId, EntityWithComponents, Query, System } from './types';
 
 /**
  * Commands available to a reference to an entity. This is intended to be used from systems as a way of adding and removing
@@ -18,14 +16,14 @@ type EntityCommands = {
 	 *
 	 * @param component The component to insert.
 	 */
-	insert: (component: AvailableComponent) => EntityCommands,
+	insert: (component: AnyComponent) => EntityCommands,
 
 	/**
 	 * Removes the given component from this Entity if it exists.
 	 *
 	 * @param component The component to remove.
 	 */
-	remove: (component: AvailableComponentName) => EntityCommands,
+	remove: (componentName: string) => EntityCommands,
 
 	/**
 	 * Despawns this Entity. Interacting with this reference after despawning will result in undefined behavior.
@@ -53,19 +51,13 @@ export class Engine {
 	 * The map of components that are currently active in the engine.
 	 * @private
 	 */
-	private _components = new Map<AvailableComponentName, Set<EntityId>>();
+	private _components = new Map<string, Set<EntityId>>();
 
 	/**
 	 * All systems registered with this engine.
 	 * @private
 	 */
 	private _systems: System[] = [];
-
-	/**
-	 * Whether or not the engine is currently paused.
-	 * @private
-	 */
-	private _paused = false;
 
 	/**
 	 * The previous time the engine rendered a frame. Used for calculating delta time.
@@ -87,10 +79,7 @@ export class Engine {
 		const commands: EntityCommands = {
 			entity,
 			insert: component => {
-				// Tried `entity.components[component.name] = component`, but Typescript complained that because it
-				// *could* be undefined, it would be invalid. Strictly speaking `entity.components[component.name]` could
-				// be undefined here, but cast it as AvailableComponent anyway as it doesn't matter (it will get overridden)
-				(entity.components[component.name] as AvailableComponent) = component;
+				entity.components[component.name] = component;
 				mapAddToSet(component.name, entityId, this._components);
 
 				return commands;
@@ -130,7 +119,7 @@ export class Engine {
 	 *
 	 * @param system The system to register.
 	 */
-	addSystem = (system: System) => {
+	addSystem = <T extends System>(system: T) => {
 		this._systems.push(system);
 		return this;
 	};
@@ -141,26 +130,32 @@ export class Engine {
 	 * @param timeDelta The time since the last frame.
 	 */
 	private onNewFrame = (timeDelta: number) => {
-		const getEntities: GetEntities = (...components) => {
-			if (components.length === 0) return this._entities.values();
+		const query: Query<AnyComponentList> = {
+			required: (...components) => {
+				if (components.length === 0) return this._entities.values();
 
-			let entities: Entity[] | undefined;
-			components.forEach(componentName => {
-				if (!entities) {
-					entities = Array.from(this._components.get(componentName) ?? new Set<EntityId>())
-						.map(id => this._entities.get(id)!);
-					return;
-				}
+				let entities: Entity[] | undefined;
+				components.forEach(componentName => {
+					if (!entities) {
+						entities = Array.from(this._components.get(componentName) ?? new Set<EntityId>())
+							.map(id => this._entities.get(id)!);
+						return;
+					}
 
-				entities = entities.filter(entity => !!entity.components[componentName]);
-			});
+					entities = entities.filter(entity => !!entity.components[componentName]);
+				});
 
-			// Might be able to make this more typesafe, but it's venturing into the dark arts...
-			return (entities ?? []) as unknown as ReturnType<GetEntities>;
+				// TODO: Don't use any
+				return (entities ?? []) as any;
+			},
+			// TODO: Fix
+			optional: () => [],
+			// TODO: Fix
+			entities: () => [],
 		};
 
 		this._systems.forEach(system => {
-			system({ engine: this, timeDelta, getEntities });
+			system(query, { engine: this, timeDelta });
 		});
 	};
 
@@ -175,23 +170,9 @@ export class Engine {
 
 			this.onNewFrame(delta);
 
-			if (this._paused) return;
 			requestAnimationFrame(handleTick);
 		}
 
 		requestAnimationFrame(handleTick);
 	};
-
-	/**
-	 * Pauses the engine.
-	 */
-	pause = () => this._paused = true;
-
-	/**
-	 * Resumes the engine.
-	 */
-	resume = () => {
-		this._paused = false;
-		this.run();
-	}
 }

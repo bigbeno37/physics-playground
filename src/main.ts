@@ -1,6 +1,6 @@
 import { mass, position, radius, velocity } from './components';
 import { createRenderSystem, physicsSystem } from './systems';
-import { Engine } from './Engine';
+import { Engine } from './engine/Engine';
 
 const canvas = document.querySelector('canvas');
 
